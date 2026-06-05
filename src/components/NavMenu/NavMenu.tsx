@@ -132,7 +132,7 @@ const NavMenu: React.FC<NavMenuProps> = ({
         Powered by&nbsp;
         <a
           style={{ textDecoration: 'none', color: theme === 'dark' ? '#6ea8fe' : '#0d6efd' }}
-          href="https://www.syncfusion.com/react-components/react-diagram?tag=es-freetools-json-and-xml-diagram-visualizer-ft"
+          href="https://www.syncfusion.com/react-components/react-diagram?tag=es-freetools-mermaid-live-editor-sample-ft"
           target="_blank"
           rel="noopener noreferrer"
         >

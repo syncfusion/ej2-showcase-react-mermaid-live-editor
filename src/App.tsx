@@ -792,13 +792,13 @@ const Footer: React.FC = () => (
             <button
                 type="button"
                 className="e-trial-btn e-btn e-primary e-icons"
-                onClick={() => window.open('https://www.syncfusion.com/downloads/react?tag=es-freetools-json-and-xml-diagram-visualizer-ads-trial', '_blank')}
+                onClick={() => window.open('https://www.syncfusion.com/downloads/react?tag=es-freetools-mermaid-live-editor-sample-ads-trial', '_blank')}
             >
             </button>
             <button
                 type="button"
                 className="e-demo-btn e-btn"
-                onClick={() => window.open('https://www.syncfusion.com/request-demo?tag=es-freetools-json-and-xml-diagram-visualizer-ads-demo', '_blank')}
+                onClick={() => window.open('https://www.syncfusion.com/request-demo?tag=es-freetools-mermaid-live-editor-sample-ads-demo', '_blank')}
             >
                 Request Demo
             </button>
