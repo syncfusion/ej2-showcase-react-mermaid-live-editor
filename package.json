@@ -1,0 +1,61 @@
+{
+  "name": "@syncfusion/ej2-showcase-react-mermaid-live-editor",
+  "version": "0.0.1",
+  "description": "Essential JS 2 for React - Mermaid Live Editor with Syncfusion Diagram",
+  "author": "Syncfusion Inc.",
+  "license": "SEE LICENSE IN license",
+  "dependencies": {
+    "@iconify-json/logos": "^1.2.10",
+    "@monaco-editor/react": "^4.7.0",
+    "@syncfusion/ej2-react-buttons": "*",
+    "@syncfusion/ej2-react-diagrams": "*",
+    "@syncfusion/ej2-react-dropdowns": "*",
+    "@syncfusion/ej2-react-inputs": "*",
+    "@syncfusion/ej2-react-navigations": "*",
+    "@syncfusion/ej2-react-popups": "*",
+    "@syncfusion/ej2-react-splitbuttons": "*",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^13.5.0",
+    "mermaid": "*",
+    "monaco-editor": "^0.52.2",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.11",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@syncfusion/ej2-showcase-helper": "*",
+    "css-loader": "^6.11.0",
+    "file-loader": "^6.2.0",
+    "glob": "^10.5.0",
+    "html-webpack-plugin": "^5.6.0",
+    "mini-css-extract-plugin": "^2.9.1",
+    "style-loader": "^4.0.0",
+    "terser-webpack-plugin": "^5.3.10",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.6.3",
+    "webpack": "^5.95.0",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^5.2.2"
+  },
+  "scripts": {
+    "start": "webpack-dev-server --open --mode development",
+    "build": "webpack --mode production",
+    "ci-publish": "gulp publish-sample"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
