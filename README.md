@@ -10,7 +10,7 @@ The React showcase demo can be accessed at the following location: [Live Demo](h
 
 To install the application dependencies, use the following command:
 
-```sh
+```
 npm install
 ```
 
@@ -18,7 +18,7 @@ npm install
 
 To Build the application, use the below command,
 
-```sh
+```
 npm run build
 ```
 
@@ -26,6 +26,6 @@ npm run build
 
 To run the sample in the browser with live reload, use the following command:
 
-```sh
+```
 npm run start
 ```
