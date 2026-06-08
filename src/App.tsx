@@ -7,6 +7,7 @@ import {
   MindMap,
   FlowchartLayout,
   SnapConstraints,
+  DiagramTools
 } from '@syncfusion/ej2-react-diagrams';
 import { ButtonComponent, CheckBoxComponent } from '@syncfusion/ej2-react-buttons';
 import Editor from '@monaco-editor/react';
@@ -227,18 +228,18 @@ const AppContent: React.FC = () => {
   // ─────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (!livePreview) return;
+    // Always validate editor content on change (debounced). Only render when livePreview is enabled.
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
     debounceRef.current = window.setTimeout(() => {
       // validateMermaid may be async (returns a Promise) in some mermaid builds
       validateMermaid(mermaidText)
-        .then((ok) => { if (ok) renderFromMermaid(mermaidText); })
+        .then((ok) => { if (ok && livePreview) renderFromMermaid(mermaidText); })
         .catch(() => { /* validation error already set in validateMermaid */ });
     }, DEBOUNCE_DELAY);
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
-  }, [mermaidText, livePreview, renderFromMermaid]);
+  }, [mermaidText, livePreview, renderFromMermaid, validateMermaid]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // EDITOR HANDLERS
@@ -337,7 +338,19 @@ const AppContent: React.FC = () => {
             reader.onload = (ev) => {
               const text = ev.target?.result as string;
               setMermaidText(text);
-              renderFromMermaid(text);
+              // Validate immediately so status reflects the imported content; only render if valid
+              validateMermaid(text).then((ok) => {
+                if (ok) {
+                  renderFromMermaid(text);
+                } else {
+                  setPendingRender(false);
+                  setImportSummary('');
+                }
+              }).catch(() => {
+                // validation error already set in validateMermaid; do not attempt render
+                setPendingRender(false);
+                setImportSummary('');
+              });
             };
             reader.readAsText(file);
           }
@@ -383,7 +396,7 @@ const AppContent: React.FC = () => {
       default:
         break;
     }
-  }, [renderFromMermaid, handleClearClick]);
+  }, [renderFromMermaid, handleClearClick, validateMermaid]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // SAMPLE LOADING
@@ -393,9 +406,10 @@ const AppContent: React.FC = () => {
     const text = SAMPLES[sampleId as SampleKey];
     if (text) {
       setMermaidText(text);
-      renderFromMermaid(text);
+      // Validate sample first so status updates immediately
+      validateMermaid(text).then(() => renderFromMermaid(text)).catch(() => renderFromMermaid(text));
     }
-  }, [renderFromMermaid]);
+  }, [renderFromMermaid, validateMermaid]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // VIEW OPTIONS
@@ -644,6 +658,7 @@ const AppContent: React.FC = () => {
               horizontalGridlines: { lineColor: themeSettings.gridlinesColor },
               verticalGridlines: { lineColor: themeSettings.gridlinesColor },
             }}
+            tool={DiagramTools.ZoomPan | DiagramTools.SingleSelect}
             getNodeDefaults={getNodeDefaults}
             getConnectorDefaults={getConnectorDefaults}
             rulerSettings={{ showRulers: showRuler }}
@@ -655,7 +670,7 @@ const AppContent: React.FC = () => {
           {!isEditorContentValid && (
             <div style={{
               position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(0,0,0,0.60)', color: '#fff', zIndex: 9999, pointerEvents: 'auto'
+              background: 'rgba(0,0,0,0.60)', color: '#fff', zIndex: 500, pointerEvents: 'auto'
             }} />
           )}
           {/* Zoom Toolbar (bottom-left) */}
