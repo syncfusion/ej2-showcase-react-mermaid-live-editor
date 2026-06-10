@@ -139,6 +139,25 @@ const AppContent: React.FC = () => {
         setValidation(false, 'Invalid Mermaid syntax');
         return false;
       }
+
+      // As soon as the syntax is valid, attempt to detect diagram type so
+      // the UI (NavMenu) can show the diagram type immediately even if the
+      // diagram itself hasn't been rendered yet.
+      try {
+        let layoutInfo = GetLayoutInfo(text);
+        if (res && (res as any).diagramType) {
+          const dt = String((res as any).diagramType).toLowerCase();
+          if (/sequence/.test(dt)) layoutInfo = { type: 'sequence' };
+          else if (/mindmap/.test(dt)) layoutInfo = { type: 'mindmap' };
+          else if (/flowchart|graph/.test(dt)) layoutInfo = { type: 'flowchart' };
+        }
+        const type = layoutInfo.type;
+        detectedTypeRef.current = type;
+        setDetectedType(type);
+      } catch (e) {
+        // ignore detection errors and fall back to previous detectedType
+      }
+
       setValidation(true, '');
       return true;
     } catch (err: any) {
@@ -146,7 +165,7 @@ const AppContent: React.FC = () => {
       setValidation(false, msg);
       return false;
     }
-  }, []);
+  }, [parseMermaid, setValidation, setDetectedType]);
 
   /** Primary entry point: detect type and load diagram (mermaid importer or small sequence model) */
   const renderFromMermaid = useCallback(async (text: string) => {
@@ -291,7 +310,17 @@ const AppContent: React.FC = () => {
 
   const handleLiveToggle = useCallback((enabled: boolean) => {
     setLivePreview(enabled);
-  }, []);
+    // If enabling live preview and there's a pending change, validate and render it now.
+    if (enabled && pendingRender) {
+      // clear pending state now that live preview is on
+      setPendingRender(false);
+      validateMermaid(mermaidText).then((ok) => {
+        if (ok) renderFromMermaid(mermaidText);
+      }).catch(() => {
+        // validation error already set inside validateMermaid
+      });
+    }
+  }, [pendingRender, mermaidText, renderFromMermaid, validateMermaid]);
 
   const handleClearClick = useCallback(() => {
     setMermaidText('');
@@ -325,7 +354,8 @@ const AppContent: React.FC = () => {
         break;
       case 'reset':
         setMermaidText(DEFAULT_SAMPLE);
-        renderFromMermaid(DEFAULT_SAMPLE);
+        if (livePreview) renderFromMermaid(DEFAULT_SAMPLE);
+        else setPendingRender(true);
         break;
       case 'import': {
         const input = document.createElement('input');
@@ -338,10 +368,16 @@ const AppContent: React.FC = () => {
             reader.onload = (ev) => {
               const text = ev.target?.result as string;
               setMermaidText(text);
-              // Validate immediately so status reflects the imported content; only render if valid
+              // Validate immediately so status reflects the imported content.
+              // Only render now when livePreview is enabled; otherwise mark as pending.
               validateMermaid(text).then((ok) => {
                 if (ok) {
-                  renderFromMermaid(text);
+                  if (livePreview) {
+                    renderFromMermaid(text);
+                  } else {
+                    setPendingRender(true);
+                    setImportSummary('');
+                  }
                 } else {
                   setPendingRender(false);
                   setImportSummary('');
@@ -396,7 +432,7 @@ const AppContent: React.FC = () => {
       default:
         break;
     }
-  }, [renderFromMermaid, handleClearClick, validateMermaid]);
+  }, [renderFromMermaid, handleClearClick, validateMermaid, livePreview]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // SAMPLE LOADING
@@ -406,10 +442,22 @@ const AppContent: React.FC = () => {
     const text = SAMPLES[sampleId as SampleKey];
     if (text) {
       setMermaidText(text);
-      // Validate sample first so status updates immediately
-      validateMermaid(text).then(() => renderFromMermaid(text)).catch(() => renderFromMermaid(text));
+      // Validate sample first so status updates immediately.
+      // Only render immediately when livePreview is enabled; otherwise mark as pending.
+      validateMermaid(text).then((ok) => {
+        if (ok) {
+          if (livePreview) renderFromMermaid(text);
+          else setPendingRender(true);
+        } else {
+          setPendingRender(false);
+          setImportSummary('');
+        }
+      }).catch(() => {
+        setPendingRender(false);
+        setImportSummary('');
+      });
     }
-  }, [renderFromMermaid, validateMermaid]);
+  }, [renderFromMermaid, validateMermaid, livePreview]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // VIEW OPTIONS
@@ -445,24 +493,6 @@ const AppContent: React.FC = () => {
         themeLink.href = themeLink.href.replace(/tailwind-dark(\.css)/, 'tailwind$1');
       }
     }
-
-  // Update existing connector colors on theme change
-  const inst = diagramRef.current as any;
-  if (inst && inst.connectors) {
-    const connectorColor = newTheme === 'dark' ? '#ffffff' : '#000000';
-    inst.connectors.forEach((connector: any) => {
-      connector.style.strokeColor = connectorColor;
-      if (connector.sourceDecorator) {
-        connector.sourceDecorator.style.fill = connectorColor;
-        connector.sourceDecorator.style.strokeColor = connectorColor;
-      }
-      if (connector.targetDecorator) {
-        connector.targetDecorator.style.fill = connectorColor;
-        connector.targetDecorator.style.strokeColor = connectorColor;
-      }
-    });
-    inst.dataBind?.();
-  }
 }, [theme, setTheme]);
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -549,30 +579,35 @@ const AppContent: React.FC = () => {
 
   const getConnectorDefaults = useCallback((connector: any) => {
     const currentType = detectedTypeRef.current;
-    const strokeColor =  theme === 'dark' ? '#ffffff' : '#000000';
+    const strokeColor =  '#6B7280';
     if (currentType === 'flowchart') {
       connector.type = 'Orthogonal';
     } else if (currentType === 'mindmap') {
       connector.type = 'Bezier';
     }
 
-    connector.style.strokeColor = strokeColor;
-
-    if (connector.sourceDecorator) {
-      connector.sourceDecorator.style.fill = strokeColor;
-      connector.sourceDecorator.style.strokeColor = strokeColor;
+    connector.style = {
+      strokeColor: strokeColor,
+      strokeWidth: 1.5
     }
+
     if (connector.targetDecorator) {
-      connector.targetDecorator.style.fill = strokeColor;
-      connector.targetDecorator.style.strokeColor = strokeColor;
+      if (currentType === 'sequence') {
+          connector.targetDecorator.style.fill = strokeColor;
+          connector.targetDecorator.style.strokeColor = strokeColor;
+      }else{
+        connector.targetDecorator = { shape: 'none' };
+      }
     }
 
     if (connector.annotations && connector.annotations[0] && connector.annotations[0].style) {
-      connector.annotations[0].style.fill = '#ffffff';
+      connector.annotations[0].style = {
+        color: strokeColor,
+      }
     }
     // flowchart / default
     return connector;
-  }, [detectedType, theme]);
+  }, [detectedType]);
   // ─────────────────────────────────────────────────────────────────────────
   // RENDER
   // ─────────────────────────────────────────────────────────────────────────
@@ -662,7 +697,7 @@ const AppContent: React.FC = () => {
             getNodeDefaults={getNodeDefaults}
             getConnectorDefaults={getConnectorDefaults}
             rulerSettings={{ showRulers: showRuler }}
-            created={(args) => { renderFromMermaid(mermaidText); }}
+            created={(args) => { if (livePreview) renderFromMermaid(mermaidText); }}
           >
             <Inject services={[DataBinding, PrintAndExport, MindMap, FlowchartLayout]} />
           </DiagramComponent>
